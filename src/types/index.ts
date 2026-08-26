@@ -72,3 +72,51 @@ export interface RegisterData {
   password: string;
   langKey: string;
 }
+
+// export interface GrowthStage {
+//   id: number;
+//   name: string;
+// }
+
+export interface Fertilizer {
+  id: number;
+  name: string;
+  description?: string;
+  type?: string;
+  nitrogen?: number;
+  phosphorus?: number;
+  potassium?: number;
+  growthStages?: GrowthStage[];
+}
+
+export interface FertilizerGrowthStageDTO {
+  id?: number | null;
+  name: string;
+  description?: string;
+  type?: string;
+  nitrogen?: number;
+  phosphorus?: number;
+  potassium?: number;
+  growthStageIds?: number[];
+}
+
+export interface FertilizerSearchCriteriaDTO {
+  name?: string;
+  fertilizerType?: string;
+  minNitrogen?: number;
+  maxNitrogen?: number;
+  minPhosphorus?: number;
+  maxPhosphorus?: number;
+  minPotassium?: number;
+  maxPotassium?: number;
+  growthStageId?: number;
+}
+
+
+export interface GrowthStage{
+  id:number;
+  name:string;
+  code:string;
+  description:string;
+
+}

@@ -13,6 +13,7 @@ import HomePage from './pages/HomePage';
 import AdminLayout from './layouts/AdminLayout';
 import HabitatManagement from './pages/admin/HabitatManagement';
 import TaxonomyManagement from './pages/admin/TaxonomyManagement';
+import FertilizerManagement from "./pages/admin/FertilizerManagement.tsx";
 
 const happyFarmTheme = {
   token: {
@@ -56,6 +57,7 @@ const App: React.FC = () => {
               <Route index element={<Navigate to="/admin/habitats" replace />} />
               <Route path="habitats" element={<HabitatManagement />} />
               <Route path="taxonomies" element={<TaxonomyManagement />} />
+              <Route path="fertilizers" element={<FertilizerManagement />}/>
             </Route>
 
             {/* Catch-all */}

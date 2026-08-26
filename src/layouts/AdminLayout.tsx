@@ -39,6 +39,12 @@ const AdminLayout: React.FC = () => {
       label: 'Taxonomies',
       onClick: () => navigate('/admin/taxonomies'),
     },
+      {
+          key: '/admin/fertilizers',
+          icon: <EnvironmentOutlined />,
+          label: 'Fertilizers',
+          onClick: () => navigate('/admin/fertilizers'),
+      },
   ];
 
   const userMenuItems = [
