@@ -82,6 +82,8 @@ export interface Fertilizer {
   id: number;
   name: string;
   description?: string;
+  descriptionJson?: Record<string, unknown> | null; // Tiptap JSONContent
+
   type?: string;
   nitrogen?: number;
   phosphorus?: number;
@@ -93,6 +95,7 @@ export interface FertilizerGrowthStageDTO {
   id?: number | null;
   name: string;
   description?: string;
+  descriptionJson?: Record<string, unknown> | null;
   type?: string;
   nitrogen?: number;
   phosphorus?: number;

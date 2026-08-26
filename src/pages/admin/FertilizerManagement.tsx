@@ -1,13 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {
     Table, Button, Input, InputNumber, Modal, Space, Card, Tag,
     Form, message, Row, Col, Select,
 } from 'antd';
 import { PlusOutlined, SearchOutlined, EditOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import type { JSONContent } from '@tiptap/react';
 import type { Fertilizer, FertilizerGrowthStageDTO, GrowthStage } from '../../types';
-import {fertilizerService} from "../../services/fertilizer.service.ts";
-import {growthStageService} from "../../services/growth.stage.service.ts";
+import { fertilizerService } from '../../services/fertilizer.service.ts';
+import { growthStageService } from '../../services/growth.stage.service.ts';
+import RichTextEditor, {RichTextEditorRef} from "../../components/RickTextEditor.tsx";
 
 const { Option } = Select;
 
@@ -16,6 +18,8 @@ interface FilterState {
     fertilizerType: string;
     growthStageId?: number;
 }
+
+const EMPTY_DOC: JSONContent = { type: 'doc', content: [] };
 
 const FertilizerManagement: React.FC = () => {
     const [fertilizers, setFertilizers] = useState<Fertilizer[]>([]);
@@ -30,6 +34,10 @@ const FertilizerManagement: React.FC = () => {
     const [editingId, setEditingId] = useState<number | null>(null);
     const [submitLoading, setSubmitLoading] = useState(false);
     const [form] = Form.useForm<FertilizerGrowthStageDTO>();
+    const editorRef = useRef<RichTextEditorRef>(null);
+// XÓA: const [descriptionJson, setDescriptionJson] = useState<JSONContent>(EMPTY_DOC);
+// Giữ 1 biến thường (không phải state) để pass initial content khi edit:
+    const initialDescriptionRef = useRef<JSONContent>(EMPTY_DOC);
 
     const fetchFertilizers = async (
         f: FilterState = filter, p = page, s = pageSize
@@ -88,6 +96,7 @@ const FertilizerManagement: React.FC = () => {
     const openCreateModal = () => {
         setEditingId(null);
         form.resetFields();
+        initialDescriptionRef.current = EMPTY_DOC;
         setIsModalOpen(true);
     };
 
@@ -95,13 +104,14 @@ const FertilizerManagement: React.FC = () => {
         setEditingId(record.id);
         form.setFieldsValue({
             name: record.name,
-            description: record.description,
             type: record.type,
+            description: record.description,
             nitrogen: record.nitrogen,
             phosphorus: record.phosphorus,
             potassium: record.potassium,
             growthStageIds: record.growthStages?.map((g) => g.id) ?? [],
         });
+        initialDescriptionRef.current = (record.descriptionJson as JSONContent) ?? EMPTY_DOC;
         setIsModalOpen(true);
     };
 
@@ -109,11 +119,13 @@ const FertilizerManagement: React.FC = () => {
         try {
             const values = await form.validateFields();
             setSubmitLoading(true);
+            const descriptionJson = editorRef.current?.getJSON() ?? EMPTY_DOC;
+            const payload: FertilizerGrowthStageDTO = { ...values, descriptionJson };
             if (editingId == null) {
-                await fertilizerService.create(values);
+                await fertilizerService.create(payload);
                 message.success(`Created fertilizer "${values.name}" success`);
             } else {
-                await fertilizerService.update({ ...values, id: editingId });
+                await fertilizerService.update({ ...payload, id: editingId });
                 message.success(`Updated fertilizer "${values.name}" success`);
             }
             setIsModalOpen(false);
@@ -232,23 +244,44 @@ const FertilizerManagement: React.FC = () => {
             <Modal
                 title={editingId == null ? 'Add fertilizer' : 'Update fertilizer'}
                 open={isModalOpen}
-                onCancel={() => { setIsModalOpen(false); form.resetFields(); setEditingId(null); }}
+                onCancel={() => {
+                    setIsModalOpen(false);
+                    form.resetFields();
+                    setEditingId(null);
+                }}
                 onOk={handleSubmit}
                 confirmLoading={submitLoading}
                 okText={editingId == null ? 'Create' : 'Update'}
                 destroyOnClose
-                width={600}
+                width={640}
             >
                 <Form form={form} layout="vertical" style={{ marginTop: '16px' }}>
                     <Form.Item name="name" label="Name fertilizer" rules={[{ required: true, message: 'Please enter name fertilizer' }]}>
                         <Input placeholder="VD: NPK 16-16-8" />
                     </Form.Item>
-                    <Form.Item name="description" label="Description">
-                        <Input.TextArea rows={2} />
+
+                    <Row gutter={12}>
+                        <Col span={12}>
+                            <Form.Item name="type" label="Type">
+                                <Input placeholder="VD: inorganic, organic..." />
+                            </Form.Item>
+                        </Col>
+                        {/*<Col span={12}>*/}
+                        {/*    <Form.Item name="npkRatio" label="NPK ratio">*/}
+                        {/*        <Input placeholder="VD: 16-16-8" />*/}
+                        {/*    </Form.Item>*/}
+                        {/*</Col>*/}
+                    </Row>
+
+                    <Form.Item label="Description" required={false}>
+                        <RichTextEditor
+                            ref={editorRef}
+                            key={editingId ?? 'new'}
+                            initialContent={initialDescriptionRef.current}
+                            placeholder="Dùng cho cây con mới phát triển..."
+                        />
                     </Form.Item>
-                    <Form.Item name="type" label="Type">
-                        <Input placeholder="VD: inorganic, organic..." />
-                    </Form.Item>
+
                     <Row gutter={12}>
                         <Col span={8}>
                             <Form.Item name="nitrogen" label="Nito (N)">
