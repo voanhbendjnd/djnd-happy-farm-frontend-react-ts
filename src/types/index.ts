@@ -123,3 +123,8 @@ export interface GrowthStage{
   description:string;
 
 }
+export interface PlantPartDTO {
+  id: number;
+  name: string;
+  description?: string;
+}
