@@ -128,3 +128,16 @@ export interface PlantPartDTO {
   name: string;
   description?: string;
 }
+
+
+export interface PestSymptom {
+  id: number;
+  name: string;
+  description?: string;
+}
+
+export interface PestSymptomDTO {
+  id?: number | null;
+  name: string;
+  description?: string;
+}

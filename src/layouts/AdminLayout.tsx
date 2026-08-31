@@ -48,10 +48,16 @@ const AdminLayout: React.FC = () => {
             onClick: () => navigate('/admin/fertilizers'),
         },
         {
-            key: '/admin/plant-parts',
+            key: '/admin/plantParts',
             icon: <BranchesOutlined />, // bộ phận cây ~ cấu trúc phân nhánh (rễ/thân/lá)
             label: 'Plant Parts',
-            onClick: () => navigate('/admin/plant-parts'),
+            onClick: () => navigate('/admin/plantParts'),
+        },
+        {
+            key: '/admin/pestSymptoms',
+            icon: <BranchesOutlined />, // bộ phận cây ~ cấu trúc phân nhánh (rễ/thân/lá)
+            label: 'Pest Symptoms',
+            onClick: () => navigate('/admin/pestSymptoms'),
         },
     ];
 
@@ -89,7 +95,9 @@ const AdminLayout: React.FC = () => {
         '/admin/habitats': 'Habitat Management',
         '/admin/taxonomies': 'Taxonomy Management',
         '/admin/fertilizers': 'Fertilizer Management',
-        '/admin/plant-part': 'Plant Part Management',
+        '/admin/plantParts': 'Plant Part Management',
+        '/admin/pestSymptoms': 'Pest Symptom Management',
+
     };
 
     const selectedKey =
