@@ -101,6 +101,9 @@ const PestSymptomManagement: React.FC = () => {
         } finally {
             setSubmitLoading(false);
         }
+
+
+
     };
 
     const columns: ColumnsType<PestSymptom> = [
