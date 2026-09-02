@@ -141,3 +141,16 @@ export interface PestSymptomDTO {
   name: string;
   description?: string;
 }
+export interface Pest {
+  id: number;
+  name: string;
+  description?: string;
+  pestSymptoms?: PestSymptomDTO[];
+}
+
+export interface PestDTO {
+  id?: number | null;
+  name: string;
+  description?: string;
+  pestSymptoms: { id: number }[];
+}
