@@ -109,7 +109,7 @@ const PestSymptomManagement: React.FC = () => {
     const columns: ColumnsType<PestSymptom> = [
         { title: 'Name pest symptom', dataIndex: 'name', key: 'name', render: (t: string) => <strong>{t}</strong> },
         {
-            title: 'Mô tả',
+            title: 'Description',
             dataIndex: 'description',
             key: 'description',
             ellipsis: true,
