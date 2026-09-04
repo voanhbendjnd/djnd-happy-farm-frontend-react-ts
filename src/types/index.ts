@@ -154,3 +154,19 @@ export interface PestDTO {
   description?: string;
   pestSymptoms: { id: number }[];
 }
+
+export type DiseaseSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'; // chỉnh lại đúng theo enum thật
+
+export interface Disease {
+  id: number;
+  name: string;
+  description?: string;
+  severity: DiseaseSeverity;
+}
+
+export interface DiseaseDTO {
+  id?: number | null;
+  name: string;
+  description?: string;
+  severity: DiseaseSeverity | string;
+}

@@ -65,6 +65,12 @@ const AdminLayout: React.FC = () => {
             label: 'Pests',
             onClick: () => navigate('/admin/pests'),
         },
+        {
+            key: '/admin/diseases',
+            icon: <BranchesOutlined />, // bộ phận cây ~ cấu trúc phân nhánh (rễ/thân/lá)
+            label: 'Pests',
+            onClick: () => navigate('/admin/diseases'),
+        },
     ];
 
     const userMenuItems = [
@@ -104,6 +110,8 @@ const AdminLayout: React.FC = () => {
         '/admin/plantParts': 'Plant Part Management',
         '/admin/pests': 'Pest Management',
         '/admin/pestSymptoms': 'Pest Symptom Management',
+        '/admin/diseases': 'Disease Management',
+
 
     };
 
