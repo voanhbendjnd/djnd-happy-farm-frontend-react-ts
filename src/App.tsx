@@ -18,6 +18,7 @@ import PlantPartManagement from "./pages/admin/PlantPartManagement.tsx";
 import PestSymptomManagement from "./pages/admin/PestSymptomManagement.tsx";
 import PestManagement from "./pages/admin/PestManagement.tsx";
 import DiseaseManagement from "./pages/admin/DiseaseManagement.tsx";
+import TreatmentManagement from "./pages/admin/TreatmentManagement.tsx";
 
 const happyFarmTheme = {
   token: {
@@ -66,6 +67,8 @@ const App: React.FC = () => {
               <Route path="pestSymptoms" element={<PestSymptomManagement />} />
                 <Route path="pests" element={<PestManagement/>} />
               <Route path="diseases" element={<DiseaseManagement/>} />
+              <Route path="treatments" element={<TreatmentManagement />} />
+
 
 
 

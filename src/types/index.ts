@@ -170,3 +170,15 @@ export interface DiseaseDTO {
   description?: string;
   severity: DiseaseSeverity | string;
 }
+
+export interface Treatment {
+  id: number;
+  method: string;
+  description?: string;
+}
+
+export interface TreatmentDTO {
+  id?: number | null;
+  method: string;
+  description?: string;
+}
