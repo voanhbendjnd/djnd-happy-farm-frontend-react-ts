@@ -1,0 +1,230 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { Table, Button, Modal, Form, Select, Input, message, Popconfirm, Tag, Empty, Alert } from 'antd';
+import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
+import { pestDiseaseService } from '../../services/pest.disease.service.ts';
+import { diseaseService } from '../../services/disease.service.ts';
+import type { Disease, PestDisease, PestDiseaseDTO } from '@/types';
+
+const { Option } = Select;
+const { TextArea } = Input;
+
+interface Props {
+    pestId: number;
+}
+
+const TRANSMISSION_ROLE_OPTIONS = ['Vector', 'Reservoir', 'Carrier', 'Direct damage'];
+
+const PestDiseaseSection: React.FC<Props> = ({ pestId }) => {
+    const [relations, setRelations] = useState<PestDisease[]>([]);
+    const [diseases, setDiseases] = useState<Disease[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [fetchError, setFetchError] = useState<string | null>(null);
+
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingRelationId, setEditingRelationId] = useState<number | null>(null);
+    const [submitLoading, setSubmitLoading] = useState(false);
+    const [form] = Form.useForm<{ diseaseId: number; transmissionRole?: string; description?: string }>();
+
+    // Lưu record đang edit để set vào form sau khi Modal inner mở xong
+    const pendingRelation = useRef<PestDisease | null>(null);
+
+    const fetchRelations = async () => {
+        setLoading(true);
+        setFetchError(null);
+        try {
+            const data = await pestDiseaseService.fetchByPest(pestId);
+            // Đảm bảo luôn là array dù API trả về bất kỳ dạng nào
+            if (Array.isArray(data)) {
+                setRelations(data);
+            } else if (data && typeof data === 'object') {
+                // Một số API wrap trong { data: [...] } hoặc { result: [...] }
+                const inner = (data as any).data ?? (data as any).result ?? [];
+                setRelations(Array.isArray(inner) ? inner : []);
+            } else {
+                setRelations([]);
+            }
+        } catch (err: any) {
+            const msg = err?.response?.data?.message ?? err?.message ?? 'Không thể tải danh sách bệnh liên quan';
+            setFetchError(msg);
+            console.error('[PestDiseaseSection] fetchRelations error:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchDiseases = async () => {
+        try {
+            const res = await diseaseService.fetchAll(undefined, undefined, 1, 200);
+            // Xử lý đủ các dạng response
+            const list = res?.result ?? res?.data?.result ?? res ?? [];
+            setDiseases(Array.isArray(list) ? (list as Disease[]) : []);
+        } catch (err) {
+            console.error('[PestDiseaseSection] fetchDiseases error:', err);
+            // không chặn UI — giữ danh sách rỗng
+            setDiseases([]);
+        }
+    };
+
+    useEffect(() => {
+        fetchRelations();
+        fetchDiseases();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pestId]);
+
+    const openAddModal = () => {
+        pendingRelation.current = null;
+        setEditingRelationId(null);
+        form.resetFields();
+        setIsModalOpen(true);
+    };
+
+    const openEditModal = (record: PestDisease) => {
+        pendingRelation.current = record;
+        setEditingRelationId(record.id);
+        form.resetFields();
+        setIsModalOpen(true);
+    };
+
+    // Set values sau khi modal inner đã fully mount (animation done)
+    const handleInnerAfterOpenChange = (open: boolean) => {
+        if (open && pendingRelation.current) {
+            const r = pendingRelation.current;
+            form.setFieldsValue({
+                diseaseId: r.diseaseId,
+                transmissionRole: r.transmissionRole,
+                description: r.description,
+            });
+        }
+        if (!open) {
+            pendingRelation.current = null;
+        }
+    };
+
+    const handleSubmit = async () => {
+        try {
+            const values = await form.validateFields();
+            setSubmitLoading(true);
+            const payload: PestDiseaseDTO = { pestId, ...values };
+            if (editingRelationId == null) {
+                await pestDiseaseService.create(payload);
+                message.success('Đã thêm bệnh liên quan');
+            } else {
+                await pestDiseaseService.update({ ...payload, id: editingRelationId });
+                message.success('Đã cập nhật quan hệ');
+            }
+            setIsModalOpen(false);
+            fetchRelations();
+        } catch (err: any) {
+            if (err?.errorFields) return; // lỗi validate inline
+            message.error(err?.response?.data?.message ?? err?.message ?? 'Lưu thất bại');
+        } finally {
+            setSubmitLoading(false);
+        }
+    };
+
+    const handleDelete = async (id: number) => {
+        try {
+            await pestDiseaseService.remove(id);
+            message.success('Đã xoá quan hệ');
+            fetchRelations();
+        } catch (err: any) {
+            message.error(err?.response?.data?.message ?? 'Xoá thất bại');
+        }
+    };
+
+    return (
+        <div style={{ marginTop: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <strong>Bệnh liên quan (Pest → Disease)</strong>
+                <Button
+                    size="small"
+                    icon={<PlusOutlined />}
+                    onClick={openAddModal}
+                    style={{ backgroundColor: '#2e7d32', borderColor: '#2e7d32', color: '#fff' }}
+                >
+                    Thêm bệnh
+                </Button>
+            </div>
+
+            {fetchError && (
+                <Alert
+                    message={fetchError}
+                    type="error"
+                    showIcon
+                    style={{ marginBottom: 8 }}
+                    action={<Button size="small" onClick={fetchRelations}>Thử lại</Button>}
+                />
+            )}
+
+            <Table
+                size="small"
+                rowKey="id"
+                loading={loading}
+                dataSource={relations}
+                pagination={false}
+                locale={{ emptyText: <Empty description="Chưa có bệnh nào liên kết" /> }}
+                columns={[
+                    { title: 'Bệnh', dataIndex: 'diseaseName', key: 'diseaseName', render: (v) => v || '-' },
+                    {
+                        title: 'Mức độ', dataIndex: 'diseaseSeverity', key: 'diseaseSeverity',
+                        render: (s?: string) => s ? <Tag>{s}</Tag> : '-',
+                    },
+                    {
+                        title: 'Vai trò lây truyền', dataIndex: 'transmissionRole', key: 'transmissionRole',
+                        render: (v) => v || '-',
+                    },
+                    {
+                        title: '', key: 'actions', width: 90,
+                        render: (_, record) => (
+                            <>
+                                <Button size="small" icon={<EditOutlined />} onClick={() => openEditModal(record)} />
+                                <Popconfirm title="Xoá quan hệ này?" onConfirm={() => handleDelete(record.id)}>
+                                    <Button size="small" danger icon={<DeleteOutlined />} style={{ marginLeft: 4 }} />
+                                </Popconfirm>
+                            </>
+                        ),
+                    },
+                ]}
+            />
+
+            <Modal
+                title={editingRelationId == null ? 'Thêm bệnh liên quan' : 'Cập nhật quan hệ'}
+                open={isModalOpen}
+                onCancel={() => {
+                    setIsModalOpen(false);
+                    form.resetFields();
+                    setEditingRelationId(null);
+                }}
+                afterOpenChange={handleInnerAfterOpenChange}
+                onOk={handleSubmit}
+                confirmLoading={submitLoading}
+                okText={editingRelationId == null ? 'Thêm' : 'Cập nhật'}
+                // KHÔNG dùng destroyOnClose để tránh crash form khi re-mount
+            >
+                <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+                    <Form.Item
+                        name="diseaseId"
+                        label="Bệnh"
+                        rules={[{ required: true, message: 'Vui lòng chọn bệnh' }]}
+                    >
+                        <Select placeholder="Chọn bệnh" showSearch optionFilterProp="children">
+                            {diseases.map((d) => (
+                                <Option key={d.id} value={d.id}>{d.name}</Option>
+                            ))}
+                        </Select>
+                    </Form.Item>
+                    <Form.Item name="transmissionRole" label="Vai trò lây truyền">
+                        <Select placeholder="Chọn vai trò" allowClear>
+                            {TRANSMISSION_ROLE_OPTIONS.map((r) => <Option key={r} value={r}>{r}</Option>)}
+                        </Select>
+                    </Form.Item>
+                    <Form.Item name="description" label="Mô tả">
+                        <TextArea rows={3} placeholder="Ghi chú thêm về cơ chế lây truyền..." />
+                    </Form.Item>
+                </Form>
+            </Modal>
+        </div>
+    );
+};
+
+export default PestDiseaseSection;

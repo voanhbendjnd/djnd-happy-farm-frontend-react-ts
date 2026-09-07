@@ -182,3 +182,21 @@ export interface TreatmentDTO {
   method: string;
   description?: string;
 }
+
+export interface PestDisease {
+  id: number;
+  pestId: number;
+  diseaseId: number;
+  description?: string;
+  transmissionRole?: string;
+  diseaseName?: string;
+  diseaseSeverity?: string;
+}
+
+export interface PestDiseaseDTO {
+  id?: number | null;
+  pestId: number;
+  diseaseId: number;
+  description?: string;
+  transmissionRole?: string;
+}

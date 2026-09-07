@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     Table, Button, Input, Modal, Card, Form, message, Row, Col, Select, Tag,
 } from 'antd';
@@ -7,7 +7,8 @@ import type { ColumnsType } from 'antd/es/table';
 import type { Pest, PestDTO, PestSymptom } from '../../types';
 import { pestService } from '../../services/pest.service.ts';
 import { pestSymptomService } from '../../services/pest.symptom.service.ts';
-
+import PestDiseaseSection from "../../pages/admin/PestDiseaseSection.tsx";
+import ErrorBoundary from '../../components/ErrorBoundary.tsx';
 const { TextArea } = Input;
 const { Option } = Select;
 
@@ -34,6 +35,8 @@ const PestManagement: React.FC = () => {
     const [editingId, setEditingId] = useState<number | null>(null);
     const [submitLoading, setSubmitLoading] = useState(false);
     const [form] = Form.useForm<PestFormValues>();
+    // Lưu record đang edit để set vào form sau khi Modal mở xong
+    const pendingEditRecord = useRef<Pest | null>(null);
 
     const fetchPests = async (q = searchName, p = page, s = pageSize) => {
         setLoading(true);
@@ -86,14 +89,26 @@ const PestManagement: React.FC = () => {
     };
 
     const openEditModal = (record: Pest) => {
+        pendingEditRecord.current = record;
         setEditingId(record.id);
-        form.setFieldsValue({
-            name: record.name,
-            description: record.description,
-            // @ts-ignore
-            pestSymptomIds: record.pestSymptoms?.map((s) => s.id) ?? [],
-        });
+        form.resetFields();
         setIsModalOpen(true);
+    };
+
+    // Gọi sau khi Modal hoàn toàn mở xong (animation done) — tránh lỗi form chưa mount
+    const handleAfterOpenChange = (open: boolean) => {
+        if (open && pendingEditRecord.current) {
+            const record = pendingEditRecord.current;
+            form.setFieldsValue({
+                name: record.name,
+                description: record.description,
+                // @ts-ignore
+                pestSymptomIds: record.pestSymptoms?.map((s) => s.id) ?? [],
+            });
+        }
+        if (!open) {
+            pendingEditRecord.current = null;
+        }
     };
 
     const handleSubmit = async () => {
@@ -221,10 +236,10 @@ const PestManagement: React.FC = () => {
                     form.resetFields();
                     setEditingId(null);
                 }}
+                afterOpenChange={handleAfterOpenChange}
                 onOk={handleSubmit}
                 confirmLoading={submitLoading}
                 okText={editingId == null ? 'Add new' : 'Update'}
-                destroyOnClose
                 width={560}
             >
                 <Form form={form} layout="vertical" style={{ marginTop: '16px' }}>
@@ -270,6 +285,14 @@ const PestManagement: React.FC = () => {
                         </Select>
                     </Form.Item>
                 </Form>
+                {editingId != null && (
+                    <>
+                        <div style={{ borderTop: '1px solid #f0f0f0', margin: '16px 0' }} />
+                        <ErrorBoundary>
+                            <PestDiseaseSection pestId={editingId} />
+                        </ErrorBoundary>
+                    </>
+                )}
             </Modal>
         </div>
     );
