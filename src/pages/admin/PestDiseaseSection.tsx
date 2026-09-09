@@ -44,7 +44,7 @@ const PestDiseaseSection: React.FC<Props> = ({ pestId }) => {
                 setRelations([]);
             }
         } catch (err: any) {
-            const msg = err?.response?.data?.message ?? err?.message ?? 'Không thể tải danh sách bệnh liên quan';
+            const msg = err?.response?.data?.message ?? err?.message ?? 'Cannot loading relation list';
             setFetchError(msg);
             console.error('[PestDiseaseSection] fetchRelations error:', err);
         } finally {
@@ -107,16 +107,16 @@ const PestDiseaseSection: React.FC<Props> = ({ pestId }) => {
             const payload: PestDiseaseDTO = { pestId, ...values };
             if (editingRelationId == null) {
                 await pestDiseaseService.create(payload);
-                message.success('Đã thêm bệnh liên quan');
+                message.success('Add disease successfully');
             } else {
                 await pestDiseaseService.update({ ...payload, id: editingRelationId });
-                message.success('Đã cập nhật quan hệ');
+                message.success('Updated relation successfully');
             }
             setIsModalOpen(false);
             fetchRelations();
         } catch (err: any) {
             if (err?.errorFields) return; // lỗi validate inline
-            message.error(err?.response?.data?.message ?? err?.message ?? 'Lưu thất bại');
+            message.error(err?.response?.data?.message ?? err?.message ?? 'Save failed');
         } finally {
             setSubmitLoading(false);
         }
@@ -125,24 +125,24 @@ const PestDiseaseSection: React.FC<Props> = ({ pestId }) => {
     const handleDelete = async (id: number) => {
         try {
             await pestDiseaseService.remove(id);
-            message.success('Đã xoá quan hệ');
+            message.success('Delete relationship successfully');
             fetchRelations();
         } catch (err: any) {
-            message.error(err?.response?.data?.message ?? 'Xoá thất bại');
+            message.error(err?.response?.data?.message ?? 'Delete failed');
         }
     };
 
     return (
         <div style={{ marginTop: 8 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <strong>Bệnh liên quan (Pest → Disease)</strong>
+                <strong>Disease relation (Pest → Disease)</strong>
                 <Button
                     size="small"
                     icon={<PlusOutlined />}
                     onClick={openAddModal}
                     style={{ backgroundColor: '#2e7d32', borderColor: '#2e7d32', color: '#fff' }}
                 >
-                    Thêm bệnh
+                    Add disease
                 </Button>
             </div>
 
@@ -162,15 +162,15 @@ const PestDiseaseSection: React.FC<Props> = ({ pestId }) => {
                 loading={loading}
                 dataSource={relations}
                 pagination={false}
-                locale={{ emptyText: <Empty description="Chưa có bệnh nào liên kết" /> }}
+                locale={{ emptyText: <Empty description="Not yet avaiable disease" /> }}
                 columns={[
-                    { title: 'Bệnh', dataIndex: 'diseaseName', key: 'diseaseName', render: (v) => v || '-' },
+                    { title: 'Disease', dataIndex: 'diseaseName', key: 'diseaseName', render: (v) => v || '-' },
                     {
-                        title: 'Mức độ', dataIndex: 'diseaseSeverity', key: 'diseaseSeverity',
+                        title: 'Severity', dataIndex: 'diseaseSeverity', key: 'diseaseSeverity',
                         render: (s?: string) => s ? <Tag>{s}</Tag> : '-',
                     },
                     {
-                        title: 'Vai trò lây truyền', dataIndex: 'transmissionRole', key: 'transmissionRole',
+                        title: 'Transmission role', dataIndex: 'transmissionRole', key: 'transmissionRole',
                         render: (v) => v || '-',
                     },
                     {
@@ -178,7 +178,7 @@ const PestDiseaseSection: React.FC<Props> = ({ pestId }) => {
                         render: (_, record) => (
                             <>
                                 <Button size="small" icon={<EditOutlined />} onClick={() => openEditModal(record)} />
-                                <Popconfirm title="Xoá quan hệ này?" onConfirm={() => handleDelete(record.id)}>
+                                <Popconfirm title="Remove this relationship?" onConfirm={() => handleDelete(record.id)}>
                                     <Button size="small" danger icon={<DeleteOutlined />} style={{ marginLeft: 4 }} />
                                 </Popconfirm>
                             </>
@@ -188,7 +188,7 @@ const PestDiseaseSection: React.FC<Props> = ({ pestId }) => {
             />
 
             <Modal
-                title={editingRelationId == null ? 'Thêm bệnh liên quan' : 'Cập nhật quan hệ'}
+                title={editingRelationId == null ? 'Add disease relationship' : 'Update disease relationship'}
                 open={isModalOpen}
                 onCancel={() => {
                     setIsModalOpen(false);
@@ -198,28 +198,28 @@ const PestDiseaseSection: React.FC<Props> = ({ pestId }) => {
                 afterOpenChange={handleInnerAfterOpenChange}
                 onOk={handleSubmit}
                 confirmLoading={submitLoading}
-                okText={editingRelationId == null ? 'Thêm' : 'Cập nhật'}
+                okText={editingRelationId == null ? 'Add' : 'Update'}
                 // KHÔNG dùng destroyOnClose để tránh crash form khi re-mount
             >
                 <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
                     <Form.Item
                         name="diseaseId"
-                        label="Bệnh"
-                        rules={[{ required: true, message: 'Vui lòng chọn bệnh' }]}
+                        label="Disease"
+                        rules={[{ required: true, message: 'Please select disease' }]}
                     >
-                        <Select placeholder="Chọn bệnh" showSearch optionFilterProp="children">
+                        <Select placeholder="Select disease" showSearch optionFilterProp="children">
                             {diseases.map((d) => (
                                 <Option key={d.id} value={d.id}>{d.name}</Option>
                             ))}
                         </Select>
                     </Form.Item>
-                    <Form.Item name="transmissionRole" label="Vai trò lây truyền">
-                        <Select placeholder="Chọn vai trò" allowClear>
+                    <Form.Item name="transmissionRole" label="Tranmission role">
+                        <Select placeholder="Select role" allowClear>
                             {TRANSMISSION_ROLE_OPTIONS.map((r) => <Option key={r} value={r}>{r}</Option>)}
                         </Select>
                     </Form.Item>
-                    <Form.Item name="description" label="Mô tả">
-                        <TextArea rows={3} placeholder="Ghi chú thêm về cơ chế lây truyền..." />
+                    <Form.Item name="description" label="Description">
+                        <TextArea rows={3} placeholder="Note detail about mechanic tranmission..." />
                     </Form.Item>
                 </Form>
             </Modal>

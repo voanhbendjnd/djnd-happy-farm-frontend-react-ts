@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
     Table, Button, Input, Modal, Card, Form, message, Row, Col, Select, Tag,
 } from 'antd';
 import { PlusOutlined, SearchOutlined, EditOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import type { Pest, PestDTO, PestSymptom } from '../../types';
+import type {Pest, PestDTO, PestSymptom, PestSymptomOption} from '../../types';
 import { pestService } from '../../services/pest.service.ts';
 import { pestSymptomService } from '../../services/pest.symptom.service.ts';
 import PestDiseaseSection from "../../pages/admin/PestDiseaseSection.tsx";
@@ -19,12 +19,15 @@ const DESCRIPTION_MAX_LENGTH = 1000;
 interface PestFormValues {
     name: string;
     description?: string;
-    pestSymptomIds?: number[];
+    pestSymptomIds?: number[] ;
 }
 
 const PestManagement: React.FC = () => {
     const [pests, setPests] = useState<Pest[]>([]);
-    const [pestSymptoms, setPestSymptoms] = useState<PestSymptom[]>([]);
+    const [symptomOptions, setSymptomOptions] = useState<PestSymptomOption[]>([]);
+    const [symptomSearching, setSymptomSearching] = useState(false);
+    const symptomFetchIdRef = useRef(0); // chống race-condition khi kết quả trả về không đúng thứ tự
+
     const [loading, setLoading] = useState(false);
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(1);
@@ -51,20 +54,43 @@ const PestManagement: React.FC = () => {
         }
     };
 
-    const fetchPestSymptoms = async () => {
-        try {
-            // Lấy hết trong 1 trang lớn để đổ vào Select — chỉnh pageSize nếu số lượng triệu chứng nhiều.
-            const res = await pestSymptomService.fetchAll(undefined, 1, 200);
-            setPestSymptoms((res.result ?? []) as PestSymptom[]);
-        } catch {
-            // không chặn UI nếu load symptom lỗi
+    // debounce thủ công, không phụ thuộc lodash
+    const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const searchSymptoms = useCallback((keyword: string) => {
+        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = setTimeout(async () => {
+            const fetchId = ++symptomFetchIdRef.current;
+            setSymptomSearching(true);
+            try {
+                const res = await pestSymptomService.fetchLikeName(keyword || undefined, 1, 20);
+                // chỉ set nếu đây vẫn là lần gọi mới nhất (tránh kết quả cũ ghi đè kết quả mới)
+                if (fetchId === symptomFetchIdRef.current) {
+                    setSymptomOptions((res.result ?? []) as PestSymptomOption[]);
+                }
+            } catch {
+                if (fetchId === symptomFetchIdRef.current) setSymptomOptions([]);
+            } finally {
+                if (fetchId === symptomFetchIdRef.current) setSymptomSearching(false);
+            }
+        }, 500); // 400ms debounce
+    }, []);
+
+    // Load sẵn 1 ít gợi ý mặc định khi mở modal (không cần gõ mới thấy option)
+    useEffect(() => {
+        if (isModalOpen) {
+            searchSymptoms('');
         }
-    };
+    }, [isModalOpen, searchSymptoms]);
 
     useEffect(() => {
-        fetchPestSymptoms();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        return () => {
+            if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+        };
     }, []);
+
+
+
 
     useEffect(() => {
         fetchPests(searchName, page, pageSize);
@@ -95,22 +121,35 @@ const PestManagement: React.FC = () => {
         setIsModalOpen(true);
     };
 
-    // Gọi sau khi Modal hoàn toàn mở xong (animation done) — tránh lỗi form chưa mount
     const handleAfterOpenChange = (open: boolean) => {
         if (open && pendingEditRecord.current) {
             const record = pendingEditRecord.current;
+            const existingSymptoms = record.pestSymptoms ?? [];
+
+            // Gộp các symptom đã gán sẵn vào options để Select hiển thị đúng tên,
+            // kể cả khi chưa search trùng khớp chúng.
+            if (existingSymptoms.length > 0) {
+                setSymptomOptions((prev) => {
+                    const merged = [...prev];
+                    existingSymptoms.forEach((s) => {
+                        if (!merged.some((m) => m.id === s.id)) {
+                            merged.push({ id: s.id, name: s.name });
+                        }
+                    });
+                    return merged;
+                });
+            }
+
             form.setFieldsValue({
                 name: record.name,
                 description: record.description,
-                // @ts-ignore
-                pestSymptomIds: record.pestSymptoms?.map((s) => s.id) ?? [],
+                pestSymptomIds: existingSymptoms.map((s) => s.id),
             });
         }
         if (!open) {
             pendingEditRecord.current = null;
         }
     };
-
     const handleSubmit = async () => {
         try {
             const values = await form.validateFields();
@@ -259,12 +298,12 @@ const PestManagement: React.FC = () => {
                             { max: NAME_MAX_LENGTH, message: `Name limit at ${NAME_MAX_LENGTH} characters` },
                         ]}
                     >
-                        <Input placeholder="VD: Bug, spider,..." maxLength={NAME_MAX_LENGTH} showCount />
+                        <Input placeholder="EX: Bug, spider,..." maxLength={NAME_MAX_LENGTH} showCount />
                     </Form.Item>
 
                     <Form.Item
                         name="description"
-                        label="Mô tả"
+                        label="Description"
                         rules={[
                             { max: DESCRIPTION_MAX_LENGTH, message: `Description limit at ${DESCRIPTION_MAX_LENGTH} characters` },
                         ]}
@@ -278,8 +317,17 @@ const PestManagement: React.FC = () => {
                     </Form.Item>
 
                     <Form.Item name="pestSymptomIds" label="Pest symptoms">
-                        <Select mode="multiple" placeholder="Choose symptoms" allowClear>
-                            {pestSymptoms.map((s) => (
+                        <Select
+                            mode="multiple"
+                            placeholder="Input name pest symptom..."
+                            showSearch
+                            filterOption={false} // tắt filter client vì đã filter ở server
+                            onSearch={searchSymptoms}
+                            loading={symptomSearching}
+                            notFoundContent={symptomSearching ? 'Finding...' : 'Not found'}
+                            allowClear
+                        >
+                            {symptomOptions.map((s) => (
                                 <Option key={s.id} value={s.id}>{s.name}</Option>
                             ))}
                         </Select>

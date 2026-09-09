@@ -141,6 +141,10 @@ export interface PestSymptomDTO {
   name: string;
   description?: string;
 }
+export interface PestSymptomProjection{
+  id: number;
+  name:string;
+}
 export interface Pest {
   id: number;
   name: string;
@@ -199,4 +203,9 @@ export interface PestDiseaseDTO {
   diseaseId: number;
   description?: string;
   transmissionRole?: string;
+}
+
+export interface PestSymptomOption {
+  id?: number | null;
+  name: string;
 }

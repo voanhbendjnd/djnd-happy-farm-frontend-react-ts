@@ -1,4 +1,4 @@
-import {PestSymptomDTO} from "@/types";
+import {PestSymptomDTO, PestSymptomProjection} from "@/types";
 import api from './api';
 const BASE_URL = '/api/pestSymptoms';
 
@@ -26,7 +26,13 @@ export const pestSymptomService = {
     },
 
     update: async (dto: PestSymptomDTO) => {
-        const res = await api.put('/api/pestSymptoms', dto);
+        const res = await api.put('/api/pestSymptoms/name', dto);
         return res.data;
+    },
+    fetchLikeName: async (q: string | undefined, page: number, pageSize: number) => {
+        const params: Record<string, any> = { page: page - 1, size: pageSize };
+        if (q) params.q = q;
+        const res = await api.get(BASE_URL, { params });
+        return res.data.data;
     },
 };
