@@ -209,3 +209,8 @@ export interface PestSymptomOption {
   id?: number | null;
   name: string;
 }
+
+export interface DiseaseOption {
+  id: number;
+  name: string;
+}

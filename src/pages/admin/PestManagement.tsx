@@ -143,6 +143,7 @@ const PestManagement: React.FC = () => {
             form.setFieldsValue({
                 name: record.name,
                 description: record.description,
+                //@ts-ignore
                 pestSymptomIds: existingSymptoms.map((s) => s.id),
             });
         }

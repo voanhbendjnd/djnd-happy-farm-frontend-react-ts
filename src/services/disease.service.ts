@@ -30,4 +30,10 @@ export const diseaseService = {
         const res = await api.put('/api/diseases', dto);
         return res.data;
     },
+    fetchLikeName: async (name: string | undefined, page: number, pageSize: number) => {
+        const params: Record<string, any> = { page: page - 1, size: pageSize };
+        if (name) params.name = name;
+        const res = await api.get(BASE_URL + "/name", { params });
+        return res.data.data;
+    },
 };

@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Table, Button, Modal, Form, Select, Input, message, Popconfirm, Tag, Empty, Alert } from 'antd';
+import {Table, Button, Modal, Form, Select, Input, message, Popconfirm, Tag, Empty, Alert, notification} from 'antd';
 import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { pestDiseaseService } from '../../services/pest.disease.service.ts';
 import { diseaseService } from '../../services/disease.service.ts';
 import type { Disease, PestDisease, PestDiseaseDTO } from '@/types';
+import {getApiErrorMessage} from "@/utils/apiError.ts";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -24,6 +25,7 @@ const PestDiseaseSection: React.FC<Props> = ({ pestId }) => {
     const [editingRelationId, setEditingRelationId] = useState<number | null>(null);
     const [submitLoading, setSubmitLoading] = useState(false);
     const [form] = Form.useForm<{ diseaseId: number; transmissionRole?: string; description?: string }>();
+    const [api, contextHolder] = notification.useNotification();
 
     // Lưu record đang edit để set vào form sau khi Modal inner mở xong
     const pendingRelation = useRef<PestDisease | null>(null);
@@ -114,10 +116,20 @@ const PestDiseaseSection: React.FC<Props> = ({ pestId }) => {
             }
             setIsModalOpen(false);
             fetchRelations();
-        } catch (err: any) {
-            if (err?.errorFields) return; // lỗi validate inline
-            message.error(err?.response?.data?.message ?? err?.message ?? 'Save failed');
-        } finally {
+
+        } catch (error: any) {
+            const errorMessage =
+                error?.response?.data?.title ??
+                error?.response?.data?.message ??
+                error?.message ??
+                'Failed to adding relation';
+
+            api.error({
+                message: 'Failed to adding relation',
+                description: errorMessage,
+                placement: 'topRight',
+            });
+        }finally {
             setSubmitLoading(false);
         }
     };
@@ -133,97 +145,101 @@ const PestDiseaseSection: React.FC<Props> = ({ pestId }) => {
     };
 
     return (
-        <div style={{ marginTop: 8 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <strong>Disease relation (Pest → Disease)</strong>
-                <Button
+        <>
+            {contextHolder}
+            <div style={{ marginTop: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <strong>Disease relation (Pest → Disease)</strong>
+                    <Button
+                        size="small"
+                        icon={<PlusOutlined />}
+                        onClick={openAddModal}
+                        style={{ backgroundColor: '#2e7d32', borderColor: '#2e7d32', color: '#fff' }}
+                    >
+                        Add disease
+                    </Button>
+                </div>
+
+                {fetchError && (
+                    <Alert
+                        message={fetchError}
+                        type="error"
+                        showIcon
+                        style={{ marginBottom: 8 }}
+                        action={<Button size="small" onClick={fetchRelations}>Try again</Button>}
+                    />
+                )}
+
+                <Table
                     size="small"
-                    icon={<PlusOutlined />}
-                    onClick={openAddModal}
-                    style={{ backgroundColor: '#2e7d32', borderColor: '#2e7d32', color: '#fff' }}
+                    rowKey="id"
+                    loading={loading}
+                    dataSource={relations}
+                    pagination={false}
+                    locale={{ emptyText: <Empty description="Not yet avaiable disease" /> }}
+                    columns={[
+                        { title: 'Disease', dataIndex: 'diseaseName', key: 'diseaseName', render: (v) => v || '-' },
+                        {
+                            title: 'Severity', dataIndex: 'diseaseSeverity', key: 'diseaseSeverity',
+                            render: (s?: string) => s ? <Tag>{s}</Tag> : '-',
+                        },
+                        {
+                            title: 'Transmission role', dataIndex: 'transmissionRole', key: 'transmissionRole',
+                            render: (v) => v || '-',
+                        },
+                        {
+                            title: '', key: 'actions', width: 90,
+                            render: (_, record) => (
+                                <>
+                                    <Button size="small" icon={<EditOutlined />} onClick={() => openEditModal(record)} />
+                                    <Popconfirm title="Remove this relationship?" onConfirm={() => handleDelete(record.id)}>
+                                        <Button size="small" danger icon={<DeleteOutlined />} style={{ marginLeft: 4 }} />
+                                    </Popconfirm>
+                                </>
+                            ),
+                        },
+                    ]}
+                />
+
+                <Modal
+                    title={editingRelationId == null ? 'Add disease relationship' : 'Update disease relationship'}
+                    open={isModalOpen}
+                    onCancel={() => {
+                        setIsModalOpen(false);
+                        form.resetFields();
+                        setEditingRelationId(null);
+                    }}
+                    afterOpenChange={handleInnerAfterOpenChange}
+                    onOk={handleSubmit}
+                    confirmLoading={submitLoading}
+                    okText={editingRelationId == null ? 'Add' : 'Update'}
+                    // KHÔNG dùng destroyOnClose để tránh crash form khi re-mount
                 >
-                    Add disease
-                </Button>
+                    <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+                        <Form.Item
+                            name="diseaseId"
+                            label="Disease"
+                            rules={[{ required: true, message: 'Please select disease' }]}
+                        >
+                            <Select placeholder="Select disease" showSearch optionFilterProp="children">
+                                {diseases.map((d) => (
+                                    <Option key={d.id} value={d.id}>{d.name}</Option>
+                                ))}
+                            </Select>
+                        </Form.Item>
+                        <Form.Item name="transmissionRole" label="Tranmission role">
+                            <Select placeholder="Select role" allowClear>
+                                {TRANSMISSION_ROLE_OPTIONS.map((r) => <Option key={r} value={r}>{r}</Option>)}
+                            </Select>
+                        </Form.Item>
+                        <Form.Item name="description" label="Description">
+                            <TextArea rows={3} placeholder="Note detail about mechanic tranmission..." />
+                        </Form.Item>
+                    </Form>
+                </Modal>
             </div>
 
-            {fetchError && (
-                <Alert
-                    message={fetchError}
-                    type="error"
-                    showIcon
-                    style={{ marginBottom: 8 }}
-                    action={<Button size="small" onClick={fetchRelations}>Thử lại</Button>}
-                />
-            )}
-
-            <Table
-                size="small"
-                rowKey="id"
-                loading={loading}
-                dataSource={relations}
-                pagination={false}
-                locale={{ emptyText: <Empty description="Not yet avaiable disease" /> }}
-                columns={[
-                    { title: 'Disease', dataIndex: 'diseaseName', key: 'diseaseName', render: (v) => v || '-' },
-                    {
-                        title: 'Severity', dataIndex: 'diseaseSeverity', key: 'diseaseSeverity',
-                        render: (s?: string) => s ? <Tag>{s}</Tag> : '-',
-                    },
-                    {
-                        title: 'Transmission role', dataIndex: 'transmissionRole', key: 'transmissionRole',
-                        render: (v) => v || '-',
-                    },
-                    {
-                        title: '', key: 'actions', width: 90,
-                        render: (_, record) => (
-                            <>
-                                <Button size="small" icon={<EditOutlined />} onClick={() => openEditModal(record)} />
-                                <Popconfirm title="Remove this relationship?" onConfirm={() => handleDelete(record.id)}>
-                                    <Button size="small" danger icon={<DeleteOutlined />} style={{ marginLeft: 4 }} />
-                                </Popconfirm>
-                            </>
-                        ),
-                    },
-                ]}
-            />
-
-            <Modal
-                title={editingRelationId == null ? 'Add disease relationship' : 'Update disease relationship'}
-                open={isModalOpen}
-                onCancel={() => {
-                    setIsModalOpen(false);
-                    form.resetFields();
-                    setEditingRelationId(null);
-                }}
-                afterOpenChange={handleInnerAfterOpenChange}
-                onOk={handleSubmit}
-                confirmLoading={submitLoading}
-                okText={editingRelationId == null ? 'Add' : 'Update'}
-                // KHÔNG dùng destroyOnClose để tránh crash form khi re-mount
-            >
-                <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-                    <Form.Item
-                        name="diseaseId"
-                        label="Disease"
-                        rules={[{ required: true, message: 'Please select disease' }]}
-                    >
-                        <Select placeholder="Select disease" showSearch optionFilterProp="children">
-                            {diseases.map((d) => (
-                                <Option key={d.id} value={d.id}>{d.name}</Option>
-                            ))}
-                        </Select>
-                    </Form.Item>
-                    <Form.Item name="transmissionRole" label="Tranmission role">
-                        <Select placeholder="Select role" allowClear>
-                            {TRANSMISSION_ROLE_OPTIONS.map((r) => <Option key={r} value={r}>{r}</Option>)}
-                        </Select>
-                    </Form.Item>
-                    <Form.Item name="description" label="Description">
-                        <TextArea rows={3} placeholder="Note detail about mechanic tranmission..." />
-                    </Form.Item>
-                </Form>
-            </Modal>
-        </div>
+        </>
     );
 };
 
