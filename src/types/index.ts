@@ -214,3 +214,20 @@ export interface DiseaseOption {
   id: number;
   name: string;
 }
+
+
+export type PropagationDifficulty = 'EASY' | 'MEDIUM' | 'HARD'; // chỉnh lại đúng theo enum thật
+
+export interface Propagation {
+  id: number;
+  method: string;
+  description?: string;
+  difficulty?: PropagationDifficulty;
+}
+
+export interface PropagationDTO {
+  id?: number | null;
+  method: string;
+  description?: string;
+  difficulty?: PropagationDifficulty | string;
+}
