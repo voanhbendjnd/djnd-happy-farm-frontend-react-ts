@@ -15,9 +15,9 @@ const DESCRIPTION_MAX_LENGTH = 1000;
 
 // Chỉnh lại đúng theo enum PropagationDifficulty thật ở backend.
 const DIFFICULTY_OPTIONS: { value: PropagationDifficulty; label: string; color: string }[] = [
-    { value: 'EASY', label: 'Dễ', color: 'green' },
-    { value: 'MEDIUM', label: 'Trung bình', color: 'gold' },
-    { value: 'HARD', label: 'Khó', color: 'red' },
+    { value: 'EASY', label: 'Easy', color: 'green' },
+    { value: 'MEDIUM', label: 'Medium', color: 'gold' },
+    { value: 'HARD', label: 'Hard', color: 'red' },
 ];
 
 const difficultyMeta = (value?: string) =>
@@ -48,7 +48,7 @@ const PropagationManagement: React.FC = () => {
             setPropagations(res.result ?? []);
             setTotal(res.meta?.total ?? 0);
         } catch {
-            message.error('Không thể tải danh sách phương pháp nhân giống');
+            message.error('Cannot loading list propagation plan');
         } finally {
             setLoading(false);
         }
@@ -100,10 +100,10 @@ const PropagationManagement: React.FC = () => {
 
             if (editingId == null) {
                 await propagationService.create(payload);
-                message.success(`Tạo phương pháp "${payload.method}" thành công`);
+                message.success(`Created propagation "${payload.method}" successfully`);
             } else {
                 await propagationService.update({ ...payload, id: editingId });
-                message.success(`Cập nhật phương pháp "${payload.method}" thành công`);
+                message.success(`Updated propagation "${payload.method}" successfully`);
             }
             setIsModalOpen(false);
             form.resetFields();
@@ -114,7 +114,7 @@ const PropagationManagement: React.FC = () => {
             message.error(
                 err?.response?.data?.message ||
                 err?.response?.data?.detail ||
-                'Lưu phương pháp nhân giống thất bại'
+                'Save propagation failed'
             );
         } finally {
             setSubmitLoading(false);
@@ -122,9 +122,9 @@ const PropagationManagement: React.FC = () => {
     };
 
     const columns: ColumnsType<Propagation> = [
-        { title: 'Phương pháp', dataIndex: 'method', key: 'method', render: (t: string) => <strong>{t}</strong> },
+        { title: 'Method', dataIndex: 'method', key: 'method', render: (t: string) => <strong>{t}</strong> },
         {
-            title: 'Độ khó',
+            title: 'Difficulty',
             dataIndex: 'difficulty',
             key: 'difficulty',
             render: (d?: string) => {
@@ -133,7 +133,7 @@ const PropagationManagement: React.FC = () => {
             },
         },
         {
-            title: 'Mô tả',
+            title: 'Description',
             dataIndex: 'description',
             key: 'description',
             ellipsis: true,
@@ -155,7 +155,7 @@ const PropagationManagement: React.FC = () => {
                 <Row gutter={[16, 16]} align="middle">
                     <Col xs={24} sm={8}>
                         <Input
-                            placeholder="Tìm theo phương pháp nhân giống..."
+                            placeholder="Find with method name..."
                             value={filter.method}
                             onChange={(e) => setFilter((f) => ({ ...f, method: e.target.value }))}
                             onPressEnter={handleSearch}
@@ -165,7 +165,7 @@ const PropagationManagement: React.FC = () => {
                     </Col>
                     <Col xs={24} sm={8}>
                         <Select
-                            placeholder="Lọc theo độ khó..."
+                            placeholder="Filter by difficulty..."
                             allowClear
                             style={{ width: '100%' }}
                             value={filter.difficulty}
@@ -196,7 +196,7 @@ const PropagationManagement: React.FC = () => {
                     style={{ backgroundColor: '#2e7d32', borderColor: '#2e7d32' }}
                     onClick={openCreateModal}
                 >
-                    Thêm phương pháp nhân giống
+                    Add propagation
                 </Button>
             </div>
 
@@ -213,7 +213,7 @@ const PropagationManagement: React.FC = () => {
             />
 
             <Modal
-                title={editingId == null ? 'Thêm phương pháp nhân giống' : 'Cập nhật phương pháp nhân giống'}
+                title={editingId == null ? 'Add new propagation' : 'Update propagation'}
                 open={isModalOpen}
                 onCancel={() => {
                     setIsModalOpen(false);
@@ -222,31 +222,31 @@ const PropagationManagement: React.FC = () => {
                 }}
                 onOk={handleSubmit}
                 confirmLoading={submitLoading}
-                okText={editingId == null ? 'Tạo mới' : 'Cập nhật'}
+                okText={editingId == null ? 'Create' : 'Update'}
                 destroyOnClose
                 width={520}
             >
                 <Form form={form} layout="vertical" style={{ marginTop: '16px' }}>
                     <Form.Item
                         name="method"
-                        label="Phương pháp nhân giống"
+                        label="Method propagation"
                         rules={[
-                            { required: true, message: 'Vui lòng nhập phương pháp nhân giống' },
+                            { required: true, message: 'Please input propagation' },
                             {
                                 validator: (_, value) => {
                                     if (value && !value.trim()) {
-                                        return Promise.reject('Không được chỉ chứa khoảng trắng');
+                                        return Promise.reject('Method cannot be empty');
                                     }
                                     return Promise.resolve();
                                 },
                             },
-                            { max: METHOD_MAX_LENGTH, message: `Không vượt quá ${METHOD_MAX_LENGTH} ký tự` },
+                            { max: METHOD_MAX_LENGTH, message: `Method limit at ${METHOD_MAX_LENGTH} characters` },
                         ]}
                     >
                         <Input placeholder="VD: Giâm cành, Chiết cành, Gieo hạt..." maxLength={METHOD_MAX_LENGTH} showCount />
                     </Form.Item>
 
-                    <Form.Item name="difficulty" label="Độ khó">
+                    <Form.Item name="difficulty" label="Difficutly">
                         <Select placeholder="Chọn độ khó" allowClear>
                             {DIFFICULTY_OPTIONS.map((d) => (
                                 <Option key={d.value} value={d.value}>{d.label}</Option>
@@ -256,9 +256,9 @@ const PropagationManagement: React.FC = () => {
 
                     <Form.Item
                         name="description"
-                        label="Mô tả"
+                        label="Description"
                         rules={[
-                            { max: DESCRIPTION_MAX_LENGTH, message: `Mô tả không vượt quá ${DESCRIPTION_MAX_LENGTH} ký tự` },
+                            { max: DESCRIPTION_MAX_LENGTH, message: `Description limit at ${DESCRIPTION_MAX_LENGTH} characters` },
                         ]}
                     >
                         <TextArea
