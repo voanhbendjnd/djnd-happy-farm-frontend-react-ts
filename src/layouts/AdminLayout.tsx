@@ -411,5 +411,4 @@ const AdminLayout: React.FC = () => {
         </Layout>
     );
 };
-
 export default AdminLayout;

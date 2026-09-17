@@ -124,5 +124,4 @@ const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>(
 );
 
 RichTextEditor.displayName = 'RichTextEditor';
-
 export default RichTextEditor;
